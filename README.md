@@ -3,9 +3,9 @@
 ## Team Members
 - Ana Marta Azinheira
 - Braulio Damba
+- Henry Tirla
 - Marco Galão
 - Rodrigo Sardinha
-- Tirla Ndzenyuy
 
 ## Submission Details
 - **Platform**: Moodle
