@@ -1,8 +1,11 @@
 # Machine Learning: Project
 
 ## Team Members
+- Ana Marta Azinheira
+- Braulio Damba
 - Marco Galão
-- ...
+- Rodrigo Sardinha
+- Tirla Ndzenyuy
 
 ## Submission Details
 - **Platform**: Moodle
