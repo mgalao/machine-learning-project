@@ -3,6 +3,7 @@
 ## Team Members
 - Ana Marta Azinheira
 - Braulio Damba
+- Catarina Ribeirinha
 - Marco Galão
 - Rodrigo Sardinha
 
