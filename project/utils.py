@@ -751,7 +751,7 @@ def show_results(models_and_parameters, df, feats_dict):
     # Drop temporary sorting columns
     results_df = results_df.drop(columns=["F1 Val_Sort", "F1 Val-Train_Sort", "Time (s)_Sort"])
     
-    return results_df
+    return results, results_df
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Final Predictions
