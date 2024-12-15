@@ -280,8 +280,11 @@ def create_features(df):
     wage_labels = ['Very Low', 'Low', 'Medium', 'High', 'Very High']
     df['Average Weekly Wage Category'] = pd.cut(df['Average Weekly Wage'], bins=wage_bins, labels=wage_labels)
 
-    # Log transformation of Age at Injury (right-skewed distribution)
-    df['Log Age at Injury'] = np.log(df['Age at Injury'])
+    # # Log transformation of Age at Injury (right-skewed distribution)
+    # # Commented out because a future dataset may contain 0 or negative values for Age at Injury,
+    # # which would result in error when applying the log transformation
+
+    # df['Log Age at Injury'] = np.log(df['Age at Injury'])
 
     # Interaction term between Age and Average Weekly Wage
     df['Age * Avg Weekly Wage'] = df['Age at Injury'] * df['Average Weekly Wage']
@@ -841,7 +844,7 @@ def final_predictions(df, df_test, best_model, feats_dict):
         # Prepare the submission DataFrame with the necessary columns (reset the index to treat 'Claim Identifier' as a column)
         df_test = df_test.reset_index()[['Claim Identifier', 'Claim Injury Type']]
 
-        return df_test, {
+        return df_test, best_model, {
             "winsorization_bounds": winsorization_bounds,
             "imputers": imputers,
             "ordinal_encoders": ordinal_encoders,
