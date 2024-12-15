@@ -772,11 +772,15 @@ def final_predictions(df, df_test, best_model, feats_dict):
         y_train = y_train.loc[X_train.index]
     
         # Winsorization
+        winsorization_bounds = {}
         for col in feats_dict["winsorization"]:
             # Calculate bounds using training data and apply to training set
-            X_train, winsorization_bounds = winsorization(X_train, col, train=X_train)
+            X_train, bounds = winsorization(X_train, col, train=X_train)
             # Apply the same bounds to the validation set
-            df_test, _ = winsorization(df_test, col, bounds=winsorization_bounds)
+            df_test, _ = winsorization(df_test, col, bounds=bounds)
+            # Store the calculated bounds
+            winsorization_bounds[col] = bounds
+
 
         # Missing values imputation
         # Fit and apply imputation on the training set
