@@ -248,4 +248,4 @@ def upload_and_predict():
     return send_file(result_filepath, as_attachment=True, download_name=f'predictions_{current_date}.csv')
 
 if __name__ == '__main__':
-    server.run(debug=True)
+    server.run(debug=False, host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
