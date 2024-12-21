@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload and Predict</title>
+    <style>
+        body {
+            background-color: #2c2f33;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h1, h2, h3, p {
+            color: #bfd630;
+            margin: 10px 0;
+        }
+        .button {
+            background-color: #bfd630;
+            color: #2c2f33;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 16px; /* Same font size for both buttons */
+            margin-top: 10px;
+            display: inline-block; /* Ensure buttons are aligned side by side */
+        }
+        .button:hover {
+            background-color: #d8e76f;
+        }
+        .button-container {
+            display: flex;
+            justify-content: flex-start; /* Align buttons to the left */
+            gap: 10px; /* Space between the buttons */
+            margin-top: 10px; /* Reduced space between buttons and file input */
+        }
+        form {
+            margin-top: 30px; /* Increased space between title and form */
+        }
+        label {
+            margin-bottom: 5px; /* Reduced space between label and file input */
+        }
+        input[type="file"] {
+            margin-bottom: 10px; /* Reduced space between file input and buttons */
+        }
+        footer {
+            margin-top: 70px; /* Increased space before footer section */
+            font-size: 0.9em;
+            color: #bfd630;
+            text-align: left;
+        }
+        footer ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+        footer ul li {
+            margin: 5px 0;
+            color: #ffffff;
+        }
+        footer ul li.group {
+            color: #bfd630;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Machine Learning 2024-25</h1>
+        <h2>To Grant or Not to Grant: Deciding on Compensation Benefits</h2>
+        <p>Open-Ended Section</p>
+    </header>
+
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <label for="file">Choose CSV file:</label>
+        <input type="file" name="file" id="file" required>
+        <div class="button-container">
+            <input type="submit" value="Predict" class="button">
+            <a href="/dashboard" class="button" target="_blank">View Dashboard</a>
+        </div>
+    </form>
+
+    <footer>
+        <ul>
+            <li class="group">Group 38:</li>
+            <li>Ana Marta Azinheira - 20240496@novaims.unl.pt</li>
+            <li>Braulio Damba - 20240007@novaims.unl.pt</li>
+            <li>Catarina Ribeirinha - 20240507@novaims.unl.pt</li>
+            <li>Marco Galão - r20201545@novaims.unl.pt</li>
+            <li>Rodrigo Sardinha - 20211627@novaims.unl.pt</li>
+        </ul>
+    </footer>
+</body>
+</html>
