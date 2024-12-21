@@ -7,34 +7,36 @@ import pandas as pd
 import numpy as np
 import re
 from math import ceil
+import time
+from datetime import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
+from io import BytesIO
 
 # Machine Learning and Data Preprocessing
-from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.model_selection import RepeatedStratifiedKFold, RandomizedSearchCV, PredefinedSplit
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OrdinalEncoder, LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import f1_score
 
 # Feature Selection
 from sklearn.feature_selection import RFE
 from sklearn.linear_model import LassoCV, LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 
-# Machine Learning Models and Hyperparameter Tuning
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import PredefinedSplit
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import BaggingClassifier
-from xgboost import XGBClassifier # pip install xgboost scikit-learn
-from sklearn.svm import SVC
-from sklearn.neural_network import MLPClassifier
-from sklearn.ensemble import AdaBoostClassifier
-from sklearn.ensemble import GradientBoostingClassifier
+# Data Balancing
+from imblearn.over_sampling import SMOTE
+from sklearn.utils import resample
 
-# Model Evaluation
-from sklearn.metrics import f1_score
-import time
+# Machine Learning Models
+from sklearn.ensemble import (AdaBoostClassifier, BaggingClassifier, RandomForestClassifier)
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
+from xgboost import XGBClassifier  # pip install xgboost scikit-learn
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Helper Function to fix C-2 and C-3 Dates (from Notebook 2)
@@ -192,7 +194,7 @@ def create_part_of_body_category(df, col='WCIO Part Of Body Code'):
     }
     
     # Initialize the new column with the default value
-    df['Part of Body Category'] = 'OTHER'
+    df['Part of Body Category'] = 'Other'
     
     # Assign categories based on the mapping
     for label, code_range in category_map.items():
@@ -210,7 +212,7 @@ def create_nature_of_injury_category(df, col='WCIO Nature of Injury Code'):
     }
     
     # Initialize the new column with the default value
-    df['Nature of Injury Category'] = 'OTHER'
+    df['Nature of Injury Category'] = 'Other'
     
     # Assign categories based on the mapping
     for label, code_range in category_map.items():
@@ -388,15 +390,19 @@ def label_encoder(y_train, y_val=None):
     # Encode the target variable
     y_train = lencoder.fit_transform(y_train)
     # Convert the encoded labels back to a DataFrame
-    y_train = pd.DataFrame(y_train, columns=['Claim Injury Type'])
+    # y_train = pd.DataFrame(y_train, columns=['Claim Injury Type'])
 
     if y_val is not None:
         # Encode the target variable
         y_val = lencoder.transform(y_val)
         # Convert the encoded labels back to a DataFrame
-        y_val = pd.DataFrame(y_val, columns=['Claim Injury Type'])
+        # y_val = pd.DataFrame(y_val, columns=['Claim Injury Type'])
     
-    return y_train, y_val, lencoder
+
+    return pd.Series(y_train, name='Claim Injury Type'), (
+        pd.Series(y_val, name='Claim Injury Type') if y_val is not None else None
+    ), lencoder
+    # return y_train, y_val, lencoder
 
 def spearman_selection(X_train, feats_dict, threshold=0.8):
     # Exclude binary variables
@@ -431,11 +437,11 @@ def spearman_selection(X_train, feats_dict, threshold=0.8):
     # Return a list of features that are not excluded
     selected_features = [col for col in non_binary_features if col not in excluded_features]
 
-    # # Print results
-    # print(f"Spearman Correlation - Number of Excluded Features: {len(excluded_features)} / {len(non_binary_features)}")
-    # print("Spearman Correlation - Excluded Features:", excluded_features)
-    # print("Spearman Correlation - Highly Correlated Pairs:", highly_correlated_pairs)
-    # print("")
+    # Print results
+    print(f"Spearman Correlation - Number of Excluded Features: {len(excluded_features)} / {len(non_binary_features)}")
+    print("Spearman Correlation - Excluded Features:", excluded_features)
+    print("Spearman Correlation - Highly Correlated Pairs:", highly_correlated_pairs)
+    print("")
           
     return selected_features
 
@@ -458,10 +464,10 @@ def rfe_selection(X_train, y_train, model=None, percentile=25, random_state=42):
     # Select features that exceed the threshold
     selected_features = [col for col, importance in zip(X_train.columns, importance_scores) if importance > threshold_value]
     
-    # # Print results
-    # print(f"RFE - Number of Selected Features: {len(selected_features)} / {X_train.shape[1]}")
-    # print("RFE - Selected Features:", selected_features)
-    # print("")
+    # Print results
+    print(f"RFE - Number of Selected Features: {len(selected_features)} / {X_train.shape[1]}")
+    print("RFE - Selected Features:", selected_features)
+    print("")
     
     return selected_features
 
@@ -479,10 +485,10 @@ def dt_selection(X_train, y_train, random_state=42):
     # Select features above the threshold
     selected_features = list(importance[importance > threshold_value].index)
     
-    # # Print results
-    # print(f"Decision Tree - Number of Selected Features: {len(selected_features)} / {X_train.shape[1]}")
-    # print("Decision Tree - Selected Features:", selected_features)
-    # print("")
+    # Print results
+    print(f"Decision Tree - Number of Selected Features: {len(selected_features)} / {X_train.shape[1]}")
+    print("Decision Tree - Selected Features:", selected_features)
+    print("")
 
     return selected_features
 
@@ -496,10 +502,10 @@ def lasso_selection(X_train, y_train, random_state=42):
     non_zero_coef = lasso_coef[lasso_coef != 0]
     selected_features = list(non_zero_coef.index)
 
-    # # Print results
-    # print(f"Lasso Regression - Number of Selected Features: {len(selected_features)} / {X_train.shape[1]}")
-    # print("Lasso Regression - Selected Features:", selected_features)
-    # print("")
+    # Print results
+    print(f"Lasso Regression - Number of Selected Features: {len(selected_features)} / {X_train.shape[1]}")
+    print("Lasso Regression - Selected Features:", selected_features)
+    print("")
 
     return selected_features
 
@@ -521,25 +527,72 @@ def voting_feature_selection(X_train, selected_features_methods, vote_threshold=
     # Select features based on vote threshold
     final_selected_features = feature_votes[feature_votes['total_votes'] > vote_threshold].index.tolist()
     
-    # # Print results
-    # print(f"Majority Voting - Number of Selected Features: {len(final_selected_features)} / {X_train.shape[1]}")
-    # print("Majority Voting - Selected Features:", final_selected_features)
-    # print("")
+    # Print results
+    print(f"Majority Voting - Number of Selected Features: {len(final_selected_features)} / {X_train.shape[1]}")
+    print("Majority Voting - Selected Features:", final_selected_features)
+    print("")
 
     return final_selected_features
 
+def oversample_undersample(X_train, y_train):
+    # Get the count of each class in y_train, sorted in descending order
+    y_train_counts = y_train.value_counts()
+
+    # Sort classes by their counts and split into two halves
+    sorted_classes = y_train_counts.index.tolist()
+    half = len(sorted_classes) // 2
+
+    # Select the first half (most frequent) for undersampling
+    classes_undersample = sorted_classes[:half]
+
+    # Select the second half (least frequent) for oversampling
+    classes_oversample = sorted_classes[half:]
+
+    # Perform oversampling for minority classes using SMOTE
+    smote = SMOTE(random_state=42)
+
+    # Filter the dataset to include only oversample target classes
+    oversample_indices = y_train[y_train.isin(classes_oversample)].index
+    X_oversample = X_train.loc[oversample_indices]
+    y_oversample = y_train.loc[oversample_indices]
+
+    # Apply SMOTE to oversample the minority classes
+    X_oversampled, y_oversampled = smote.fit_resample(X_oversample, y_oversample)
+
+    # Combine oversampled data back with the full dataset
+    X_resampled = pd.concat([X_train, pd.DataFrame(X_oversampled, columns=X_train.columns)], ignore_index=True)
+    y_resampled = pd.concat([y_train, pd.Series(y_oversampled, name=y_train.name)], ignore_index=True)
+
+    # Undersample the majority classes
+    for class_label in classes_undersample:
+        # Filter the data for the current class
+        class_indices = y_resampled[y_resampled == class_label].index
+
+        # Adjust target size to be the minimum of the class size or the average size
+        target_size = min(len(class_indices), len(y_resampled) // len(classes_undersample)) # Avoid exceeding population size
+        
+        # Randomly sample the majority class to undersample it
+        undersampled_class_indices = np.random.choice(class_indices, size=target_size, replace=False)
+        
+        # Select the undersampled data
+        X_resampled = pd.concat([X_resampled.loc[~X_resampled.index.isin(class_indices)], X_resampled.loc[undersampled_class_indices]])
+        y_resampled = pd.concat([y_resampled.loc[~y_resampled.index.isin(class_indices)], y_resampled.loc[undersampled_class_indices]])
+
+    return X_resampled.reset_index(drop=True), y_resampled.reset_index(drop=True)
+
 def define_models(models_parameters):
     models_and_parameters = {
-        "LogisticRegression": (LogisticRegression(random_state=42), models_parameters["LogisticRegression"]),
-        "RandomForest": (RandomForestClassifier(random_state=42), models_parameters["RandomForest"]),
-        "XGBoost": (XGBClassifier(random_state=42),models_parameters["XGBoost"]),
-        "SVM": (SVC(random_state=42), models_parameters["SVM"]),
+        "Adaboost": (AdaBoostClassifier(random_state=42), models_parameters["Adaboost"]),
         "Bagging": (BaggingClassifier(random_state=42), models_parameters["Bagging"]),
         "DecisionTree": (DecisionTreeClassifier(random_state=42), models_parameters["DecisionTree"]),
+        # "GBM": (GradientBoostingClassifier(random_state=42), models_parameters["GBM"]),
+        "GaussianNB": (GaussianNB(), models_parameters["GaussianNB"]),
+        "LogisticRegression": (LogisticRegression(random_state=42), models_parameters["LogisticRegression"]),
         "NeuralNetworks": (MLPClassifier(random_state=42), models_parameters["NeuralNetworks"]),
-        "Adaboost": (AdaBoostClassifier(random_state=42), models_parameters["Adaboost"]),
-        "GBM": (GradientBoostingClassifier(random_state=42), models_parameters["GBM"]),
-     }
+        "RandomForest": (RandomForestClassifier(random_state=42), models_parameters["RandomForest"]),
+        # "SVM": (SVC(random_state=42), models_parameters["SVM"]),
+        "XGBoost": (XGBClassifier(random_state=42), models_parameters["XGBoost"]),
+    }
 
     return models_and_parameters
 
@@ -618,6 +671,11 @@ def cross_validation(models_and_parameters, df, feats_dict, n_splits=3, n_repeat
         # Label encoding
         y_train, y_val, _ = label_encoder(y_train, y_val)
 
+        # Apply over and under-sampling
+        X_train, y_train = oversample_undersample(X_train, y_train)
+
+        print('Starting Feature Selection:\n')
+
         # Feature selection
         selected_feats_spearman = spearman_selection(X_train, feats_dict)
         selected_feats_rfe = rfe_selection(X_train, y_train)
@@ -634,9 +692,9 @@ def cross_validation(models_and_parameters, df, feats_dict, n_splits=3, n_repeat
         X_train = X_train[final_selected_features]
         X_val = X_val[final_selected_features]
 
-        # -------------------- GridSearch --------------------
+        # -------------------- RandomizedSearch --------------------
 
-        print('End of Preprocessing; Starting GridSearch\n')
+        print('End of Feature Selection; Starting RandomizedSearch:\n')
 
         # Combine train and validation datasets
         X_combined = np.concatenate([X_train, X_val])
@@ -648,29 +706,30 @@ def cross_validation(models_and_parameters, df, feats_dict, n_splits=3, n_repeat
         # Define the PredefinedSplit
         ps = PredefinedSplit(test_fold=test_fold)
 
-        for model_name, (model, param_grid) in models_and_parameters.items():
-            # Define the GridSearch
-            gridsearch = GridSearchCV(
+        for model_name, (model, param_dist) in models_and_parameters.items():
+            # Define the RandomizedSearch
+            randomized_search = RandomizedSearchCV(
                 estimator=model,
-                param_grid=param_grid,
+                param_distributions=param_dist,
                 scoring="f1_macro", # Macro F1 scores to better align with Kaggle’s evaluation criteria
                 cv=ps,
-                refit=False
+                refit=False,
+                n_iter=100, # Number of random combinations to try
+                random_state=42,
+                n_jobs=-1 # Use all available CPU cores
             )
 
             # Time the model training
             begin = time.perf_counter()
-            gridsearch.fit(X_combined, y_combined)
+            randomized_search.fit(X_combined, y_combined)
             end = time.perf_counter()
 
             # Extract the best parameters and refit the model on the training set (refit is set to False)
-            best_params = gridsearch.best_params_
+            best_params = randomized_search.best_params_
             best_model = model.set_params(**best_params)
             best_model.fit(X_train, y_train)
 
             # Collect metrics
-            print('Collecting Model Metrics')
-
             y_train_pred = best_model.predict(X_train)
             y_val_pred = best_model.predict(X_val)
 
@@ -811,7 +870,12 @@ def final_predictions(df, df_test, best_model, feats_dict):
         # Label encoding
         y_train, _, lencoder = label_encoder(y_train)
 
-        # Feature selection
+        # Under and over sampling
+        X_train, y_train = oversample_undersample(X_train, y_train)
+    
+        print('Starting Feature Selection:\n')
+
+        # Feature Selection
         selected_feats_spearman = spearman_selection(X_train, feats_dict)
         selected_feats_rfe = rfe_selection(X_train, y_train)
         selected_feats_dt = dt_selection(X_train, y_train)
@@ -852,5 +916,150 @@ def final_predictions(df, df_test, best_model, feats_dict):
             "fill_values_freq_encoding": fill_values_freq_encoding,
             "scaler": scaler,
             "lencoder": lencoder,
+            "selected_feats_spearman": selected_feats_spearman,
+            "selected_feats_rfe": selected_feats_rfe,
+            "selected_feats_dt": selected_feats_dt,
+            "selected_feats_lasso": selected_feats_lasso,
             "final_selected_features": final_selected_features
         }
+
+def predict_new_inputs(df_new_inputs, best_model, objects_final_predictions):
+    # -------------------- Treatment from Notebook 2 --------------------
+
+    # Store original index of DataFrame because it will change after some operations
+    original_index = df_new_inputs.index
+
+    # -------------------- Drop columns with a lot of missing values and replace placeholder values with NaN --------------------
+
+    # Drop columns that are not needed
+    df_new_inputs.drop(columns=["OIICS Nature of Injury Description", "IME-4 Count"], inplace=True)
+
+    # Replace placeholder values with NaN
+    placeholder_replacements = {
+        "Carrier Type": "UNKNOWN",
+        "Gender": "U",
+        "Medical Fee Region": "UK",
+        "Alternative Dispute Resolution": "U",
+        "County of Injury": "UNKNOWN"
+    }
+    for col, placeholder in placeholder_replacements.items():
+        df_new_inputs[col].replace(placeholder, np.nan, inplace=True)
+
+    # -------------------- Adjust data types for columns --------------------
+
+    # Define column groups for type adjustments
+    columns_object_to_datetime = ['Accident Date', 'Assembly Date', 'C-2 Date', 'C-3 Date', 'First Hearing Date']
+    code_columns = ['Industry Code', 'WCIO Cause of Injury Code', 'WCIO Nature of Injury Code', 'WCIO Part Of Body Code']
+    columns_float_to_int = ['Age at Injury', 'Birth Year', 'Number of Dependents']
+    columns_object_to_binary = ['Alternative Dispute Resolution', 'Attorney/Representative', 'COVID-19 Indicator']
+
+    # Convert object columns to datetime (missing dates become NaT)
+    for col in columns_object_to_datetime:
+        df_new_inputs[col] = pd.to_datetime(df_new_inputs[col])
+
+    # Convert float columns with codes to object type (via Int64 for nullable integers)
+    for col in code_columns:
+        df_new_inputs[col] = df_new_inputs[col].astype('Int64').astype(object)
+
+    # Convert float columns to integers (using Int64 for null handling)
+    for col in columns_float_to_int:
+        df_new_inputs[col] = df_new_inputs[col].astype('Int64')
+
+    # Convert binary object columns to binary integers (Y/N to 1/0)
+    for col in columns_object_to_binary:
+        df_new_inputs[col] = df_new_inputs[col].map({'Y': 1, 'N': 0}).astype('Int64')
+
+    # Handle gender conversion: convert 'Gender' column to binary and drop original
+    df_new_inputs["Male"] = df_new_inputs["Gender"].map({'M': 1, 'F': 0}).astype('Int64')
+    df_new_inputs.drop(columns=['Gender'], inplace=True)
+
+    # -------------------- Adjust date columns for consistency --------------------
+
+    # Apply the date adjustment function
+    df_new_inputs = df_new_inputs.apply(adjust_dates, axis=1)
+    df_new_inputs["Male"] = df_new_inputs["Male"].astype('Int64') # Convert 'Male' column back to nullable integers
+
+    # -------------------- Additional adjustments for specific columns --------------------
+
+    # Convert specific object columns to nullable integers
+    columns_object_to_int = ["Birth Year", "Alternative Dispute Resolution"]
+    for col in columns_object_to_int:
+        df_new_inputs[col] = df_new_inputs[col].astype('Int64')
+
+    # Drop columns that are no longer needed
+    df_new_inputs.drop(columns=['Birth Year', 'Number of Dependents'], inplace=True)
+
+    # -------------------- Validate and clean ZIP codes --------------------
+
+    # Define the valid zip code pattern (5 digits)
+    valid_zip_pattern = r'^\d{5}$'
+    df_new_inputs['Zip Code'] = df_new_inputs['Zip Code'].apply(lambda x: x if re.match(valid_zip_pattern, str(x)) else np.nan)
+
+    # -------------------- Handle "WCIO Part Of Body Code" adjustments --------------------
+
+    # Convert "WCIO Part Of Body Code" column to numeric for processing
+    df_new_inputs["WCIO Part Of Body Code"].apply(pd.to_numeric)
+
+    # Adjust codes with invalid values
+    condition = df_new_inputs['WCIO Part Of Body Code'].isin([-9, 90])
+    df_new_inputs.loc[df_new_inputs['WCIO Part Of Body Code'] == -9, 'WCIO Part Of Body Code'] = 90
+    df_new_inputs.loc[condition, 'WCIO Part Of Body Description'] = 'Multiple Body Parts'
+
+    # Convert "WCIO Part Of Body Code" back to object
+    df_new_inputs['WCIO Part Of Body Code'] = df_new_inputs['WCIO Part Of Body Code'].astype('object')
+
+    # -------------------- Treatment and Prediction from Notebook 3 --------------------
+
+    # -------------------- Treatment --------------------
+
+    # Store the objects for preprocessing in variables
+    winsorization_bounds = objects_final_predictions["winsorization_bounds"]
+    imputers = objects_final_predictions["imputers"]
+    ordinal_encoders = objects_final_predictions["ordinal_encoders"]
+    freq_encoders = objects_final_predictions["freq_encoders"]
+    fill_values_freq_encoding = objects_final_predictions["fill_values_freq_encoding"]
+    scaler = objects_final_predictions["scaler"]
+    lencoder = objects_final_predictions["lencoder"]
+    final_selected_features = objects_final_predictions["final_selected_features"]
+
+    # Winsorization
+    for col in feats_dict["winsorization"]:
+        # Apply the same bounds to the new inputs
+        df_new_inputs, _ = winsorization(df_new_inputs, col, bounds=winsorization_bounds[col])
+
+    # Missing values imputation
+    df_new_inputs, _ = impute_missing_values(df_new_inputs, feats_dict, imputers=imputers)
+
+    # Feature engineering
+    df_new_inputs = create_features(df_new_inputs)
+
+    # Save this dataset to be able to create analysis on all trated variables and not encoded and not standardized
+    df_predictions = df_new_inputs.copy()
+
+    # Drop description and date columns
+    df_new_inputs.drop(columns = feats_dict["codes_drop"] + feats_dict["descriptions_drop"] + feats_dict["dates_drop"], inplace=True)
+
+    # Ordinal encoding
+    _, df_new_inputs, _ = ordinal_encoder(feats_dict, data=df_new_inputs, encoders=ordinal_encoders)
+
+    # Frequency encoding
+    _, df_new_inputs, _, _ = frequency_encoder(feats_dict, data=df_new_inputs, encoders=freq_encoders, fill_values=fill_values_freq_encoding)
+
+    # Data scaling
+    _, df_new_inputs, _ = scale_data(data=df_new_inputs, scaler=scaler)
+
+    # Feature selection
+    df_new_inputs = df_new_inputs[final_selected_features]
+
+    # -------------------- Prediction --------------------
+
+    # Predict the 'Claim Injury Type' for the new inputs dataset by using the trained model
+    df_predictions['Claim Injury Type'] = best_model.predict(df_new_inputs)
+
+    # Decode the predicted labels back to their original categorical values
+    df_predictions['Claim Injury Type'] = lencoder.inverse_transform(df_predictions['Claim Injury Type'])
+
+    # Restore the original index before preparing the submission DataFrame
+    df_predictions.index = original_index
+
+    return df_predictions
