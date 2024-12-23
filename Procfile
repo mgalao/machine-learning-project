@@ -1,1 +1,0 @@
-web: gunicorn project.open_ended_section.app:server
